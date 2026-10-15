@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyword Collector</title>
+  <style>
+    @font-face { font-family: Inter; font-weight: 400; src: url(/fonts/inter-latin-400-normal.woff2) format('woff2'); }
+    @font-face { font-family: Inter; font-weight: 500; src: url(/fonts/inter-latin-500-normal.woff2) format('woff2'); }
+    @font-face { font-family: Inter; font-weight: 600; src: url(/fonts/inter-latin-600-normal.woff2) format('woff2'); }
+    @font-face { font-family: Inter; font-weight: 700; src: url(/fonts/inter-latin-700-normal.woff2) format('woff2'); }
+
+    :root {
+      --radius: 15px;
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --text: #1b1d22;
+      --muted: #646a76;
+      --line: #e2e4e9;
+      --accent: #2f5bea;
+      --accent-text: #ffffff;
+      --accent-soft: #e8eefe;
+      --warn-bg: #fff4dc;
+      --warn-line: #f0c36a;
+      --warn-text: #6b4800;
+      --ok: #1f8a4c;
+      --danger: #c23b32;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14161a;
+        --card: #1d2026;
+        --text: #eceef2;
+        --muted: #9aa1ad;
+        --line: #30343c;
+        --accent: #6f8ff5;
+        --accent-text: #0e1220;
+        --accent-soft: #232c45;
+        --warn-bg: #3a2f17;
+        --warn-line: #8a6a2a;
+        --warn-text: #f6d9a0;
+        --ok: #4cc283;
+        --danger: #f07a71;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 Inter, system-ui, sans-serif;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 28px 16px 60px; }
+    header h1 { font-size: 24px; margin: 0; font-weight: 700; }
+    header p { margin: 4px 0 20px; color: var(--muted); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 16px; margin: 0 0 14px; font-weight: 600; }
+
+    label.field { display: block; font-weight: 500; margin-bottom: 14px; }
+    label.field span { display: block; margin-bottom: 6px; }
+    input[type=text], select {
+      width: 100%;
+      font: inherit;
+      color: inherit;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+    }
+    input[type=text]:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+
+    fieldset { border: 0; padding: 0; margin: 0 0 14px; }
+    legend { font-weight: 500; margin-bottom: 6px; padding: 0; }
+    .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+    .choice {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 8px 14px; cursor: pointer; user-select: none;
+    }
+    .choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+    .choice input { accent-color: var(--accent); margin: 0; }
+    .hint { color: var(--muted); font-size: 14px; margin: 4px 0 16px; }
+
+    .buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+    button {
+      font: inherit; font-weight: 600;
+      border-radius: var(--radius);
+      padding: 11px 20px;
+      border: 1px solid var(--line);
+      background: var(--card); color: var(--text);
+      cursor: pointer;
+    }
+    button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    button:not(:disabled):hover { filter: brightness(.96); }
+
+    .notice {
+      border: 1px solid var(--warn-line); background: var(--warn-bg); color: var(--warn-text);
+      border-radius: var(--radius); padding: 14px 16px; margin: 0 0 14px;
+    }
+    .notice p { margin: 0 0 10px; }
+    .notice p:last-child { margin: 0; }
+    .error { color: var(--danger); font-weight: 500; margin: 10px 0 0; }
+    [hidden] { display: none !important; }
+
+    .status-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+    .pill {
+      font-size: 13px; font-weight: 600; padding: 3px 12px; border-radius: 999px;
+      background: var(--accent-soft); color: var(--accent);
+    }
+    .pill.ok { color: var(--ok); }
+    .pill.warn { background: var(--warn-bg); color: var(--warn-text); }
+    .pill.bad { color: var(--danger); }
+    .progress-text { font-size: 18px; font-weight: 600; word-break: break-word; }
+    .bar { height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 12px 0; }
+    .bar div { height: 100%; width: 0; background: var(--accent); transition: width .4s; }
+    .message { margin: 0 0 16px; color: var(--muted); }
+    .message.big { font-size: 16px; }
+
+    .keywords-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .keywords-head span { color: var(--muted); font-size: 14px; }
+    ol.keywords {
+      list-style: none; margin: 0; padding: 0;
+      max-height: 420px; overflow-y: auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); column-gap: 24px;
+    }
+    ol.keywords li { padding: 5px 0; border-bottom: 1px solid var(--line); word-break: break-word; }
+    .empty { color: var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Keyword Collector</h1>
+    <p>Collects Google Instant suggestions for a keyword. Runs only on this computer.</p>
+  </header>
+
+  <!-- 1. The form -->
+  <section class="card" aria-labelledby="form-title">
+    <h2 id="form-title">New run</h2>
+    <form id="form" autocomplete="off">
+      <label class="field">
+        <span>Seed keyword</span>
+        <input type="text" id="seed" placeholder="e.g. boho earrings" maxlength="80" required>
+      </label>
+
+      <div class="row">
+        <label class="field">
+          <span>Google domain</span>
+          <select id="domain"></select>
+        </label>
+        <label class="field">
+          <span>Language</span>
+          <select id="language"></select>
+        </label>
+      </div>
+
+      <fieldset>
+        <legend>Letters to add</legend>
+        <div class="choices">
+          <label class="choice"><input type="checkbox" id="includeSingle" checked> a – z</label>
+          <label class="choice"><input type="checkbox" id="includeDouble" checked> aa – zz</label>
+          <label class="choice"><input type="checkbox" id="includeLeft"> Also in front (left side)</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Speed</legend>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="speed" value="slow" checked> Slow (4–7 s between searches)</label>
+          <label class="choice"><input type="radio" name="speed" value="normal"> Normal (2–4 s)</label>
+        </div>
+      </fieldset>
+
+      <p class="hint" id="estimate"></p>
+
+      <!-- Questions shown before starting (resume? / too many runs?) -->
+      <div class="notice" id="question" hidden>
+        <p id="question-text"></p>
+        <div class="buttons" id="question-buttons"></div>
+      </div>
+
+      <div class="buttons">
+        <button type="submit" class="primary" id="start">Start</button>
+      </div>
+      <p class="error" id="form-error" hidden></p>
+    </form>
+  </section>
+
+  <!-- 2. Progress and controls -->
+  <section class="card" aria-labelledby="progress-title">
+    <h2 id="progress-title">Progress</h2>
+    <div class="status-line">
+      <span class="pill" id="pill">Ready</span>
+      <span class="progress-text" id="progress-text">Nothing running yet</span>
+    </div>
+    <div class="bar" aria-hidden="true"><div id="bar"></div></div>
+    <div class="notice" id="waiting" hidden><p id="waiting-text"></p></div>
+    <p class="message" id="message">Fill in the form and press Start.</p>
+    <div class="buttons">
+      <button type="button" id="pause" disabled>Pause</button>
+      <button type="button" id="continue" disabled>Continue</button>
+      <button type="button" id="stop" disabled>Stop</button>
+      <button type="button" class="primary" id="download" disabled>Download Excel</button>
+    </div>
+    <p class="error" id="control-error" hidden></p>
+  </section>
+
+  <!-- 3. Keywords found so far -->
+  <section class="card" aria-labelledby="keywords-title">
+    <div class="keywords-head">
+      <h2 id="keywords-title">Keywords found: <span id="keyword-count">0</span></h2>
+      <span id="suggestion-count"></span>
+    </div>
+    <ol class="keywords" id="keywords"></ol>
+    <p class="empty" id="keywords-empty">Keywords will appear here as they are found.</p>
+  </section>
+</main>
+
+<script>
+  // ---- Small helpers ----
+  const $ = (id) => document.getElementById(id);
+
+  function showError(element, text) {
+    element.textContent = text || '';
+    element.hidden = !text;
+  }
+
+  /** Sends a button press to the local server and returns its answer. */
+  async function post(url, body) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Something went wrong.');
+    return data;
+  }
+
+  // ---- The form ----
+  function readForm() {
+    return {
+      seed: $('seed').value,
+      domain: $('domain').value,
+      language: $('language').value,
+      includeSingle: $('includeSingle').checked,
+      includeDouble: $('includeDouble').checked,
+      includeLeft: $('includeLeft').checked,
+      speed: document.querySelector('input[name=speed]:checked').value,
+    };
+  }
+
+  /** Shows how many searches the form will do and roughly how long that takes. */
+  function updateEstimate() {
+    const f = readForm();
+    const groups = (f.includeSingle ? 26 : 0) + (f.includeDouble ? 26 : 0);
+    const searches = 1 + groups * (f.includeLeft ? 2 : 1);
+    // Typing and reading takes about 4 seconds, plus the wait between searches.
+    const secondsEach = 4 + (f.speed === 'slow' ? 5.5 : 3);
+    const minutes = Math.max(1, Math.round((searches * secondsEach) / 60));
+    $('estimate').textContent = groups === 0
+      ? 'Tick a – z, aa – zz, or both.'
+      : `${searches} searches · about ${minutes} minutes`;
+  }
+
+  /** Shows a question with buttons above Start, and waits for a click. Returns the chosen value. */
+  function ask(text, choices) {
+    return new Promise((resolve) => {
+      $('question-text').textContent = text;
+      const box = $('question-buttons');
+      box.replaceChildren();
+      for (const choice of choices) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = choice.label;
+        if (choice.primary) button.className = 'primary';
+        button.onclick = () => { $('question').hidden = true; resolve(choice.value); };
+        box.append(button);
+      }
+      $('question').hidden = false;
+    });
+  }
+
+  async function onStart(event) {
+    event.preventDefault();
+    showError($('form-error'), '');
+    const settings = readForm();
+    $('start').disabled = true;
+    try {
+      const check = await post('/api/check', settings);
+
+      let resume = false;
+      if (check.resumable) {
+        const { done, total } = check.resumable;
+        const choice = await ask(
+          `You have an unfinished run for this keyword from today (${done} of ${total} searches done). Carry on where it stopped?`,
+          [
+            { label: 'Resume', value: 'resume', primary: true },
+            { label: 'Start over', value: 'fresh' },
+            { label: 'Cancel', value: 'cancel' },
+          ],
+        );
+        if (choice === 'cancel') return;
+        resume = choice === 'resume';
+      }
+
+      if (check.tooManyRuns) {
+        const choice = await ask(
+          'You have started more than 3 runs in the last hour. Searching a lot in a short time makes Google more likely to ask for a check. Start anyway?',
+          [
+            { label: 'Start anyway', value: 'go', primary: true },
+            { label: 'Cancel', value: 'cancel' },
+          ],
+        );
+        if (choice === 'cancel') return;
+      }
+
+      await post('/api/start', { settings, resume });
+    } catch (error) {
+      showError($('form-error'), error.message);
+    } finally {
+      $('start').disabled = isBusy;
+    }
+  }
+
+  // ---- Progress (live updates from the server) ----
+  const STATE_LABELS = {
+    idle: ['Ready', ''],
+    running: ['Running', ''],
+    paused: ['Paused', 'warn'],
+    waiting: ['Waiting for you', 'warn'],
+    finished: ['Finished', 'ok'],
+    stopped: ['Stopped', 'warn'],
+    'browser-closed': ['Browser closed', 'warn'],
+    error: ['Problem', 'bad'],
+  };
+  let isBusy = false;
+
+  function render(snap) {
+    isBusy = ['running', 'paused', 'waiting'].includes(snap.state);
+
+    const [label, tone] = STATE_LABELS[snap.state] || [snap.state, ''];
+    $('pill').textContent = label;
+    $('pill').className = 'pill ' + tone;
+
+    $('progress-text').textContent = snap.total
+      ? `${snap.done} of ${snap.total}` + (snap.currentQuery ? ` · ${snap.currentQuery}` : '')
+      : 'Nothing running yet';
+    $('bar').style.width = snap.total ? `${(snap.done / snap.total) * 100}%` : '0';
+
+    // A Google check or cookie screen gets a big yellow box, since it needs the user.
+    const waiting = snap.state === 'waiting';
+    $('waiting').hidden = !waiting;
+    $('waiting-text').textContent = waiting ? snap.message : '';
+    $('message').hidden = waiting;
+    $('message').textContent = snap.message || (snap.state === 'idle' ? 'Fill in the form and press Start.' : '');
+    if (waiting && document.hidden) document.title = '⚠ Action needed · Keyword Collector';
+    else document.title = 'Keyword Collector';
+
+    $('pause').disabled = snap.state !== 'running';
+    $('continue').disabled = !['paused', 'waiting'].includes(snap.state);
+    $('stop').disabled = !isBusy;
+    $('download').disabled = snap.totalSuggestions === 0;
+    $('start').disabled = isBusy;
+    for (const el of $('form').querySelectorAll('input, select')) el.disabled = isBusy;
+
+    $('keyword-count').textContent = snap.keywords.length;
+    $('suggestion-count').textContent = snap.totalSuggestions ? `${snap.totalSuggestions} suggestions in total` : '';
+    $('keywords-empty').hidden = snap.keywords.length > 0;
+    renderKeywords(snap.keywords);
+  }
+
+  /** Only adds the new keywords to the list, so scrolling the list is not disturbed. */
+  function renderKeywords(keywords) {
+    const list = $('keywords');
+    if (keywords.length < list.children.length) list.replaceChildren();
+    for (let i = list.children.length; i < keywords.length; i++) {
+      const item = document.createElement('li');
+      item.textContent = keywords[i];
+      list.append(item);
+    }
+  }
+
+  function connect() {
+    const events = new EventSource('/api/events');
+    events.onmessage = (event) => {
+      showError($('control-error'), '');
+      render(JSON.parse(event.data));
+    };
+    events.onerror = () => {
+      showError($('control-error'), 'Lost contact with the tool. Is it still running in the Cursor terminal? (npm start)');
+    };
+  }
+
+  // ---- Buttons ----
+  async function control(url) {
+    try { await post(url); } catch (error) { showError($('control-error'), error.message); }
+  }
+
+  /** Downloads the Excel file to the normal Downloads folder. */
+  async function download() {
+    showError($('control-error'), '');
+    try {
+      const response = await fetch('/api/excel');
+      if (!response.ok) throw new Error((await response.json()).error);
+      const header = response.headers.get('Content-Disposition') || '';
+      const match = header.match(/filename\*=UTF-8''([^;]+)/) || header.match(/filename="?([^";]+)"?/);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(await response.blob());
+      link.download = match ? decodeURIComponent(match[1]) : 'keywords.xlsx';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      showError($('control-error'), error.message || 'Could not make the Excel file.');
+    }
+  }
+
+  // ---- Start up ----
+  async function init() {
+    const options = await (await fetch('/api/options')).json();
+    for (const domain of options.domains) $('domain').append(new Option(domain, domain));
+    for (const lang of options.languages) $('language').append(new Option(lang.name, lang.code));
+
+    $('form').addEventListener('submit', onStart);
+    $('form').addEventListener('change', updateEstimate);
+    $('pause').onclick = () => control('/api/pause');
+    $('continue').onclick = () => control('/api/continue');
+    $('stop').onclick = () => control('/api/stop');
+    $('download').onclick = download;
+    updateEstimate();
+    connect();
+  }
+  init();
+</script>
+</body>
+</html>
