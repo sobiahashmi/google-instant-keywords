@@ -9,7 +9,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "sample": "tsx scripts/sample-excel.ts",
-    "postinstall": "npx playwright install chromium"
+    "postinstall": "npx playwright install chromium",
+    "try": "tsx scripts/try-run.ts"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
