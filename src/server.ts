@@ -1,9 +1,10 @@
-// The small local web server: serves the page at http://localhost:3000, receives the
+// The small local web server: serves the page at http://localhost:3000 (or the PORT in .env), receives the
 // button presses, and pushes live progress to the page (Server-Sent Events).
 // It only listens on this computer (127.0.0.1), never on the network.
 
 import express, { type Request, type Response } from 'express';
 import { exec } from 'node:child_process';
+import http from 'node:http';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { GoogleSession } from './google.js';
@@ -12,8 +13,10 @@ import { RunStore } from './store.js';
 import { RunHistory } from './history.js';
 import { DOMAINS, LANGUAGES, validateSettings } from './settings.js';
 import { buildExcelBuffer, excelFileName } from './excel.js';
+import { loadPort } from './config.js';
+import { isPortInUse } from './port.js';
 
-const PORT = 3000;
+const PORT = readPortOrExit();
 const HOST = '127.0.0.1';
 const ROOT = process.cwd();
 const RUNS_FOLDER = path.join(ROOT, 'runs');
@@ -124,20 +127,43 @@ app.get('/api/excel', async (_req, res) => {
   }
 });
 
-const server = app.listen(PORT, HOST, () => {
-  const url = `http://localhost:${PORT}`;
-  console.log(`\nKeyword tool is running. Open ${url} in your browser.`);
-  console.log('To turn it off, click in this terminal and press Ctrl+C.\n');
-  // Open the page in the normal browser (Windows "start" command).
-  if (process.platform === 'win32' && !process.env.NO_OPEN) exec(`start "" ${url}`);
-});
+/** Reads PORT from .env; if it is not a valid number, explains why and stops. */
+function readPortOrExit(): number {
+  try {
+    return loadPort();
+  } catch (error) {
+    console.error(`\n${(error as Error).message}\nOpen the .env file and set, for example: PORT=3000\n`);
+    process.exit(1);
+  }
+}
+
+/** Explains which port is busy and stops. The tool never moves to another port by itself. */
+function exitPortBusy(): never {
+  console.error(`\nPort ${PORT} is busy: another program is already using it.`);
+  console.error(`If the tool is already running in another window, just open http://localhost:${PORT}`);
+  console.error('Otherwise close the other program, or choose a different port in the .env file (for example PORT=3001).\n');
+  process.exit(1);
+}
+
+if (await isPortInUse(PORT)) exitPortBusy();
+
+const server = http.createServer(app);
 
 server.on('error', (error: NodeJS.ErrnoException) => {
-  if (error.code === 'EADDRINUSE') {
-    console.error(`\nPort ${PORT} is already in use: the tool is probably already running in another terminal.`);
-    console.error(`Open http://localhost:${PORT} in your browser, or close the other terminal and try again.\n`);
+  if (error.code === 'EADDRINUSE') exitPortBusy();
+  if (error.code === 'EACCES') {
+    console.error(`\nWindows does not allow the tool to use port ${PORT}. Choose another port in the .env file (for example PORT=3001).\n`);
   } else {
     console.error(error);
   }
   process.exit(1);
+});
+
+// This runs only once the port is really ours.
+server.listen(PORT, HOST, () => {
+  const url = `http://localhost:${PORT}`;
+  console.log(`\nGoogle Instant Keywords running at ${url}`);
+  console.log('To turn it off, click in this window and press Ctrl+C.\n');
+  // Open the page in the normal browser (Windows "start" command).
+  if (process.platform === 'win32' && !process.env.NO_OPEN) exec(`start "" ${url}`);
 });

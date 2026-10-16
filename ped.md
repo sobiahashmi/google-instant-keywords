@@ -81,6 +81,7 @@ Header row bold with a filter, columns auto-sized, frozen first row.
 ## 5. Non-functional requirements
 
 - Runs on Windows 10/11 (my machine) with Node.js LTS. Use **npm**, not pnpm.
+- Runs locally on port 3000.
 - Simple install: `npm install` then `npm start`. Playwright browser installs automatically on first run (`npx playwright install chromium` in a postinstall script).
 - Clean, simple local page: Inter font, 15px border radius, mobile-friendly layout, clear buttons.
 - Code: TypeScript, small clear modules, comments in plain English, unit tests for query generation, cleaning and Excel export.
